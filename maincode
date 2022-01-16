@@ -1,0 +1,224 @@
+#include<LiquidCrystal.h>;
+#include <Wire.h>
+#include <Servo.h>
+
+int i = 0;
+int j = 0;
+
+Servo servo_8;
+int position = 0;
+#define REDLITE 6
+#define GREENLITE  7
+#define BLUELITE 8
+
+LiquidCrystal lcd1(12, 11, 5, 4, 3, 2);
+LiquidCrystal lcd2(12, 10, 5, 4, 3, 2);
+LiquidCrystal lcd3(12, 9, 5, 4, 3, 2);
+
+int brightness = 255;
+
+int level = 1;
+int SW_pin = A2;
+int X_pin = A0;
+int Y_pin = A1;
+
+int buster_x = 0;  //ranges from 0 to 15                                                                // Line number to show your string (Either 0 or 1)
+int buster_y = 0;  //ranges from 0 to 5
+
+int ghost_x = rand() % 15 + 1;
+int ghost_y = rand() % 3 + 1;
+
+
+int distance_squared = pow(ghost_y - buster_y, 2) + pow(ghost_x - buster_x, 2);
+
+byte buster_pix[8] = {
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+};
+
+void setup()
+{
+  lcd1.begin(16, 2);                                                                   // Initialise both LCD.
+  lcd2.begin(16, 2);
+  lcd3.begin(16, 2);
+  lcd1.clear();
+  lcd2.clear();
+  lcd3.clear();
+  lcd1.createChar(0, buster_pix);
+  lcd1.begin(16, 2);
+  pinMode(SW_pin, INPUT);
+  pinMode(X_pin, INPUT);
+  pinMode(Y_pin, INPUT);
+  digitalWrite(SW_pin, HIGH);
+  servo_8.attach(0, 500, 2500);
+  pinMode(REDLITE, OUTPUT);
+  pinMode(GREENLITE, OUTPUT);
+  pinMode(BLUELITE, OUTPUT);
+  brightness = 255;
+  Serial.begin(9600);
+
+}
+
+void loop()
+{
+   if(level >= 8){
+    lcd1.clear();
+    lcd2.clear();
+    lcd3.clear();
+    level = level + 1;
+    lcd1.print("7 GHOSTS BUSTED");
+    lcd2.print("CLICK TO PLAY ");
+    delay(3000);
+    ghost_x = rand() % 15 + 1;
+    ghost_y = rand() % 3 + 1;
+    if(digitalRead(SW_pin) == 0){
+        level = 1;
+      }
+  }
+ 
+  distance_squared = pow(ghost_y - buster_y, 2) + pow(ghost_x - buster_x, 2);
+  lcd1.clear();
+  lcd2.clear();
+  lcd3.clear();
+ 
+  if(analogRead(X_pin)<200){
+    buster_x = buster_x - 1;
+  }
+  if(analogRead(X_pin)>800){
+    buster_x = buster_x + 1;
+  }
+  if(analogRead(Y_pin)<200){
+    buster_y = buster_y - 1;
+  }
+  if(analogRead(Y_pin)>800){
+    buster_y = buster_y + 1;
+  }
+ 
+  if(buster_x >= 16){
+    buster_x = 0;
+    buster_y = buster_y + 1;
+  }
+  if(buster_y>=4){
+    buster_y = 0;
+    buster_x = buster_x + 1;
+  }
+  if(buster_x == -1){
+    buster_x = 15;
+    buster_y = buster_y - 1;
+  }
+  if(buster_y== -1){
+    buster_y = 3;
+    buster_x = buster_x - 1;
+  }
+  Serial.println(digitalRead(SW_pin));
+
+  if(digitalRead(SW_pin) == 0)
+  {
+    buttonCheck();
+  }
+  UpdateLCDDisplay();
+  heatCheck();
+
+  delay(400);
+
+  /**
+  Serial.print("buster x:  ");
+  Serial.print(buster_x);
+  Serial.print(";  buster y:  ");
+  Serial.print(buster_y);
+  Serial.print("\nghost x:  ");
+  Serial.print(ghost_x);
+  Serial.print(";  ghost y:  ");
+  Serial.print(ghost_y);
+  **/
+}
+
+void UpdateLCDDisplay()
+{
+ 
+  if (buster_y == 0 || buster_y == 1) {
+    lcd1.clear();
+    lcd2.clear();
+    lcd3.clear();
+    lcd1.setCursor(buster_x,buster_y);
+    lcd1.write(byte(0));
+  }
+  if (buster_y == 2 || buster_y == 3) {
+    lcd1.clear();
+    lcd2.clear();
+    lcd3.clear();
+    lcd2.setCursor(buster_x,buster_y - 2);
+    lcd2.write(byte(0));
+  }
+}
+
+void buttonCheck(){
+ 
+  distance_squared = pow(ghost_y - buster_y, 2) + pow(ghost_x - buster_x, 2);
+  if (distance_squared == 0)
+  { lcd1.clear();
+    lcd2.clear();
+    lcd3.clear();
+    level = level + 1;
+    lcd1.print("GHOST BUSTED");
+    lcd2.print("Ghost ");
+    lcd2.print(level);
+    lcd2.print("...");
+    delay(3000);
+    ghost_x = rand() % 15 + 1;
+    ghost_y = rand() % 3 + 1;
+   
+    if(level ==8){
+      lcd1.clear();
+      lcd2.clear();
+      lcd3.clear();
+      level = level + 1;
+      lcd1.print("7 GHOSTS BUSTED");
+      lcd2.print("CLICK TO PLAY ");
+      delay(2000);
+      if(digitalRead(SW_pin)==0){
+        level = 1;
+      }
+    }
+  }
+  else{
+    lcd1.print("BOO");
+    }
+}
+
+
+void setBacklight(uint8_t r, uint8_t g, uint8_t b) {
+  // normalize the red LED - its brighter than the rest!
+  r = map(r, 0, 255, 0, 100);
+  g = map(g, 0, 255, 0, 150);
+ 
+  r = map(r, 0, 255, 0, brightness);
+  g = map(g, 0, 255, 0, brightness);
+  b = map(b, 0, 255, 0, brightness);
+ 
+  // common anode so invert!
+  r = map(r, 0, 255, 255, 0);
+  g = map(g, 0, 255, 255, 0);
+  b = map(b, 0, 255, 255, 0);
+  /**
+  Serial.print("R = "); Serial.print(r, DEC);
+  Serial.print(" G = "); Serial.print(g, DEC);
+  Serial.print(" B = "); Serial.println(b, DEC);
+  **/
+  analogWrite(REDLITE, r);
+  analogWrite(GREENLITE, g);
+  analogWrite(BLUELITE, b);
+}
+
+void heatCheck(){
+  if (distance_squared < 4) {setBacklight(255, 0, 0);}//red
+  else if (distance_squared >= 4 && distance_squared < 9) {  setBacklight(255, 0, 255);}//purple
+  else if (distance_squared >= 9 && distance_squared < 16) { setBacklight(0, 0, 255);}//green
+  else if (distance_squared >= 16 && distance_squared < 25) {  setBacklight(0, 255, 0);}//blue
+  else if (distance_squared >= 25) { setBacklight(255,255,255);}//white
